@@ -103,7 +103,8 @@ await ofetch('/url', { ignoreResponseError: true })
 
 ```ts
 await ofetch('http://google.com/404', {
-  retry: 3
+  retry: 3,
+  retryDelay: 500, //ms, default to 100
 })
 ```
 

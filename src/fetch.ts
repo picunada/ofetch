@@ -45,7 +45,10 @@ export interface FetchOptions<R extends ResponseType = ResponseType>
   responseType?: R;
   response?: boolean;
   retry?: number | false;
-
+  /**
+   * Delay between retries in milliseconds.
+   */
+  retryDelay?: number;
   onRequest?(context: FetchContext): Promise<void> | void;
   onRequestError?(
     context: FetchContext & { error: Error }
@@ -86,7 +89,7 @@ const retryStatusCodes = new Set([
 export function createFetch(globalOptions: CreateFetchOptions): $Fetch {
   const { fetch, Headers } = globalOptions;
 
-  function onError(context: FetchContext): Promise<FetchResponse<any>> {
+  async function onError(context: FetchContext): Promise<FetchResponse<any>> {
     // Is Abort
     // If it is an active abort, it will not retry automatically.
     // https://developer.mozilla.org/en-US/docs/Web/API/DOMException#error_names
@@ -94,6 +97,7 @@ export function createFetch(globalOptions: CreateFetchOptions): $Fetch {
       (context.error && context.error.name === "AbortError") || false;
     // Retry
     if (context.options.retry !== false && !isAbort) {
+      const retryDelay = context.options.retryDelay || 100;
       let retries;
       if (typeof context.options.retry === "number") {
         retries = context.options.retry;
@@ -103,6 +107,7 @@ export function createFetch(globalOptions: CreateFetchOptions): $Fetch {
 
       const responseCode = (context.response && context.response.status) || 500;
       if (retries > 0 && retryStatusCodes.has(responseCode)) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
         return $fetchRaw(context.request, {
           ...context.options,
           retry: retries - 1,

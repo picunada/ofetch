@@ -135,7 +135,7 @@ describe("ofetch", () => {
       const { headers } = await $fetch(getURL("post"), {
         method: "POST",
         body: { num: 42 },
-        headers: sentHeaders,
+        headers: sentHeaders as HeadersInit,
       });
       expect(headers).to.include({ "x-header": "1" });
       expect(headers).to.include({ accept: "application/json" });
@@ -194,6 +194,19 @@ describe("ofetch", () => {
       (error_) => error_
     );
     expect(error.request).to.equal(getURL("404"));
+  });
+
+  it("retry with delay", async () => {
+    const fast = $fetch<string>(getURL("404"), {
+      retry: 2,
+      retryDelay: 1,
+    }).catch(() => "fast");
+    const slow = $fetch<string>(getURL("404"), {
+      retry: 2,
+      retryDelay: 100,
+    }).catch(() => "slow");
+    const race = await Promise.race([slow, fast]);
+    expect(race).to.equal("fast");
   });
 
   it("abort with retry", () => {
